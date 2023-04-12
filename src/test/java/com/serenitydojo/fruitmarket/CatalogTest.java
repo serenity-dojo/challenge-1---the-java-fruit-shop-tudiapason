@@ -2,6 +2,7 @@ package com.serenitydojo.fruitmarket;
 
 import com.serenitydojo.*;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -12,55 +13,81 @@ import static com.serenitydojo.Fruit.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class CatalogTest {
-    private Catalog catalog;
-    private Map<Fruit, Double> datasetPrices = new HashMap<>();
+    private static Catalog catalog;
+    private static Map<Fruit, Double> datasetPrices;
 
-    @Before
-    public void setUp() {
+    @BeforeClass
+    public static void beforeClass() {
         //Dataset is composed of a list of Fruits with its price in Euro
-        datasetPrices.put(Apple, 0.00);
+        datasetPrices = new HashMap<>();
+        datasetPrices.put(Apple, 4.00);
         datasetPrices.put(Orange, 5.50);
         datasetPrices.put(Banana, 6.00);
         datasetPrices.put(Pear, 4.50);
 
-        //Initialize Catalog
-        catalog = Catalog.withItems(
-                new CatalogItem(Pear),
-                new CatalogItem(Apple),
-                new CatalogItem(Banana)
-        );
-        catalog.setPriceOf(Pear, datasetPrices.get(Pear));
-        catalog.setPriceOf(Apple, datasetPrices.get(Apple));
-        catalog.setPriceOf(Banana, datasetPrices.get(Banana));
+        catalog = new Catalog();
     }
 
-    //The Catalog should list the names of the currently available fruit in alphabetical order
+    @Before
+    public void beforeMethod() {
+        assertThat(catalog.clearCatalog()).isEqualTo(true);
+    }
+
+    //You can add items without price to the Catalog .
     @Test
-    public void shouldListAvailableFruitsAlphabetically() {
-        List<CatalogItem> availableFruits = catalog.getAvailableFruits();
-        assertThat(availableFruits.get(0).getFruit()).isEqualTo(Apple);
-        assertThat(availableFruits.get(1).getFruit()).isEqualTo(Banana);
-        assertThat(availableFruits.get(2).getFruit()).isEqualTo(Pear);
-    }
+    public void shouldBeAbleToAddACatalogItemWithoutPrice() {
+        catalog.withItems(new CatalogItem(Orange));
 
+        assertThat(catalog.getAvailableFruits().get(0).getFruit()).isEqualTo(Orange);
+        assertThat(catalog.getAvailableFruits().get(0).getPrice()).isEqualTo(0.00);
+    }
     //You can update the catalog with the current market price of a fruit
     //The Catalog should report the price of a given type of fruit
     @Test
     public void shouldBeAbleToUpdateTheCurrentPriceOfAFruit() {
-        Double newPrice = 4.00;
-        catalog.setPriceOf(Apple, newPrice);
-        assertThat(catalog.getPriceOf(Apple)).isEqualTo(newPrice);
+        catalog.withItems(new CatalogItem(Apple));
+        catalog.setPriceOf(Apple, datasetPrices.get(Apple));
+        assertThat(catalog.getAvailableFruits().get(0).getPrice()).isEqualTo(datasetPrices.get(Apple));
+    }
+
+    //You can add items with price to the Catalog .
+    @Test
+    public void shouldBeAbleToAddACatalogItemWithPrice() {
+        catalog.withItems(new CatalogItem(Pear,  datasetPrices.get(Pear)));
+        assertThat(catalog.getAvailableFruits().get(0).getFruit()).isEqualTo(Pear);
+        assertThat(catalog.getAvailableFruits().get(0).getPrice()).isEqualTo(datasetPrices.get(Pear));
+    }
+    //The Catalog should list the names of the currently available fruit in alphabetical order
+    @Test
+    public void shouldListAvailableFruitsAlphabetically() {
+        catalog.withItems(
+                new CatalogItem(Pear),
+                new CatalogItem(Apple),
+                new CatalogItem(Banana)
+        );
+
+        assertThat(catalog.getAvailableFruits().get(0).getFruit()).isEqualTo(Apple);
+        assertThat(catalog.getAvailableFruits().get(1).getFruit()).isEqualTo(Banana);
+        assertThat(catalog.getAvailableFruits().get(2).getFruit()).isEqualTo(Pear);
     }
 
     //The Catalog should throw a FruitUnavailableException if the fruit is not currently available
-    @Test(expected = FruitUnavailableException.class)
-    public void shouldBeAbleToRaiseAFruitUnavailableExceptionForNotAvailableFruit() {
-        catalog.withItems(new CatalogItem(null));
+    @Test (expected = FruitUnavailableException.class)
+    public void shouldBeAbleToRaiseAFruitUnavailableExceptionForUpdatingANotAvailableFruit() {
+        catalog.withItems(new CatalogItem(Pear));
+        catalog.setPriceOf(Apple, datasetPrices.get(Apple));
     }
 
     //You can add items to your shopping cart, which should keep a running total.
     @Test
     public void shouldBeAbleToAddItemsToMyShoppingCart(){
+        catalog.withItems(
+                new CatalogItem(Apple, datasetPrices.get(Apple)),
+                new CatalogItem(Orange, datasetPrices.get(Orange)),
+                new CatalogItem(Banana, datasetPrices.get(Banana)),
+                new CatalogItem(Pear, datasetPrices.get(Pear))
+        );
+
         //Dataset is composed of a list of Fruits with its weight in kilogrammes
         Map<Fruit, Double> datasetShopping = new HashMap<>();
         datasetShopping.put(Pear, 3.00);
@@ -76,6 +103,13 @@ public class CatalogTest {
     //You can add items to your shopping cart, which should keep a running total.
     @Test
     public void shouldNotGetDiscountIfBuyLessThan5Kg(){
+        catalog.withItems(
+                new CatalogItem(Apple, datasetPrices.get(Apple)),
+                new CatalogItem(Orange, datasetPrices.get(Orange)),
+                new CatalogItem(Banana, datasetPrices.get(Banana)),
+                new CatalogItem(Pear, datasetPrices.get(Pear))
+        );
+
         //Dataset is composed of a list of Fruits with its weight in kilogrammes
         Map<Fruit, Double> datasetShopping = new HashMap<>();
         datasetShopping.put(Pear, 3.00);
@@ -83,8 +117,9 @@ public class CatalogTest {
 
         MyShoppingCart myShoppingCart = new MyShoppingCart(catalog);
         myShoppingCart.addItem(Pear, datasetShopping.get(Pear));
-        Double pearPrice =  catalog.getPriceOf(Pear) * datasetShopping.get(Pear);
         myShoppingCart.addItem(Banana, datasetShopping.get(Banana));
+
+        Double pearPrice =  catalog.getPriceOf(Pear) * datasetShopping.get(Pear);
         Double bananaPrice =   catalog.getPriceOf(Banana) * datasetShopping.get(Banana);
         Double expectedTotal = pearPrice + bananaPrice;
 
@@ -94,6 +129,13 @@ public class CatalogTest {
     //When you buy 5 kilos or more of any fruit, you get a 10% discount.
     @Test
     public void shouldGet10PercentDiscountIfBuy5Kg(){
+        catalog.withItems(
+                new CatalogItem(Apple, datasetPrices.get(Apple)),
+                new CatalogItem(Orange, datasetPrices.get(Orange)),
+                new CatalogItem(Banana, datasetPrices.get(Banana)),
+                new CatalogItem(Pear, datasetPrices.get(Pear))
+        );
+
         //Dataset is composed of a list of Fruits with its weight in kilogrammes
         Map<Fruit, Double> datasetShopping = new HashMap<>();
         datasetShopping.put(Pear, 4.99);
@@ -101,8 +143,9 @@ public class CatalogTest {
 
         MyShoppingCart myShoppingCart = new MyShoppingCart(catalog);
         myShoppingCart.addItem(Pear, datasetShopping.get(Pear));
-        Double pearPrice =  catalog.getPriceOf(Pear) * datasetShopping.get(Pear);
         myShoppingCart.addItem(Banana, datasetShopping.get(Banana));
+
+        Double pearPrice =  catalog.getPriceOf(Pear) * datasetShopping.get(Pear);
         Double bananaPrice = catalog.getPriceOf(Banana) * datasetShopping.get(Banana);
         Double bananaDiscount = catalog.getPriceOf(Banana) * datasetShopping.get(Banana) * 0.10;
         Double expectedTotal = pearPrice + bananaPrice - bananaDiscount;
@@ -113,14 +156,22 @@ public class CatalogTest {
     //When you buy 5 kilos or more of any fruit, you get a 10% discount.
     @Test
     public void shouldGet10PercentDiscountIfBuyMore5Kg(){
+        catalog.withItems(
+                new CatalogItem(Apple, datasetPrices.get(Apple)),
+                new CatalogItem(Orange, datasetPrices.get(Orange)),
+                new CatalogItem(Banana, datasetPrices.get(Banana)),
+                new CatalogItem(Pear, datasetPrices.get(Pear))
+        );
+
         Map<Fruit, Double> datasetShopping = new HashMap<>();
         datasetShopping.put(Pear, 4.99);
         datasetShopping.put(Banana, 5.01);
 
         MyShoppingCart myShoppingCart = new MyShoppingCart(catalog);
         myShoppingCart.addItem(Pear, datasetShopping.get(Pear));
-        Double pearPrice =  catalog.getPriceOf(Pear) * datasetShopping.get(Pear);
         myShoppingCart.addItem(Banana, datasetShopping.get(Banana));
+
+        Double pearPrice =  catalog.getPriceOf(Pear) * datasetShopping.get(Pear);
         Double bananaPrice = catalog.getPriceOf(Banana) * datasetShopping.get(Banana);
         Double bananaDiscount = catalog.getPriceOf(Banana) * datasetShopping.get(Banana) * 0.10;
         Double expectedTotal = pearPrice + bananaPrice - bananaDiscount;
@@ -131,6 +182,8 @@ public class CatalogTest {
     //The ShoppingCart should throw a FruitUnavailableException if the fruit is not currently available
     @Test(expected = FruitUnavailableException.class)
     public void shouldBeAbleToRaiseAFruitUnavailableExceptionForNotAvailableFruitInShoppingCart() {
+        catalog.withItems(new CatalogItem(Apple, datasetPrices.get(Apple)));
+
         Map<Fruit, Double> datasetShopping = new HashMap<>();
         datasetShopping.put(Peaches, 4.99);
 
@@ -139,14 +192,14 @@ public class CatalogTest {
     }
 
     //The ShoppingCart should throw a FruitPriceUnavailableException if the fruit price is not currently available in the Catalog
-    @Test(expected = FruitPriceUnavailableException.class)
+    @Test (expected = FruitPriceUnavailableException.class)
     public void shouldBeAbleToRaiseAFruitPriceUnavailableExceptionForNotAvailableFruitPriceInCatalog() {
-        Map<Fruit, Double> datasetShopping = new HashMap<>();
-        datasetShopping.put(Rambutan, 1.00);
+        catalog.withItems(new CatalogItem(Apple));
 
-        catalog.withItems(new CatalogItem(Rambutan));
+        Map<Fruit, Double> datasetShopping = new HashMap<>();
+        datasetShopping.put(Apple, 1.00);
 
         MyShoppingCart myShoppingCart = new MyShoppingCart(catalog);
-        myShoppingCart.addItem(Rambutan, datasetShopping.get(Rambutan));
+        myShoppingCart.addItem(Apple, datasetShopping.get(Apple));
     }
 }

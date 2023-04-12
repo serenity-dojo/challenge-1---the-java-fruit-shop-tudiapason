@@ -2,6 +2,8 @@ package com.serenitydojo;
 
 //import jdk.internal.icu.text.UnicodeSet;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -10,28 +12,34 @@ public class Catalog {
     private static List<CatalogItem> availableFruits = new ArrayList<>();
     private Map<String, Double> fruitToPrice = new HashMap<>();
 
-    public static Catalog withItems(CatalogItem... catalogItems) {
-        try {
+    public static Catalog withItems(@NotNull CatalogItem... catalogItems) {
             List<String> fruitNames = catalog.getFruitNames();
             for (CatalogItem catalogItem : catalogItems) {
-                if(!isAvailableFruit(catalogItem.getFruit())){catalog.availableFruits.add(catalogItem);}
+                if(getFruitPosition(catalogItem.getFruit()) == -1){catalog.availableFruits.add(catalogItem);}
             }
             return catalog;
-        }catch (NullPointerException noSuchFruit){
-            throw new FruitUnavailableException("Requested fruit is not an available fruit");
-        }
     }
 
 
     public void setPriceOf(Fruit fruit, double price) {
-        fruitToPrice.put(fruit.name(), price);
+        try {
+            int indexFruit = getFruitPosition(fruit);
+            availableFruits.get(indexFruit).setPrice(price);
+        }catch (IndexOutOfBoundsException noSuchFruit){
+            throw new FruitUnavailableException("Requested fruit is not available");
+        }
     }
 
-    public double getPriceOf(Fruit fruitVariety) {
+    public double getPriceOf(Fruit fruit) {
         try {
-            return fruitToPrice.get(fruitVariety.name());
-        }catch (NullPointerException noSuchFruit){
-            throw new FruitPriceUnavailableException("Requested fruit price is not available");
+            int indexFruit = getFruitPosition(fruit);
+            Double fruitPrice = availableFruits.get(indexFruit).getPrice();
+            if(fruitPrice == 0.00){
+                throw new FruitPriceUnavailableException("Price of " + fruit.name() + " is not available");
+            }
+            return fruitPrice;
+        }catch (IndexOutOfBoundsException noSuchFruit){
+            throw new FruitUnavailableException(fruit.name() + " is not available");
         }
     }
 
@@ -46,9 +54,14 @@ public class Catalog {
                 .collect(Collectors.toList());
     }
 
-    public static Boolean isAvailableFruit(Fruit fruit){
+    public static int getFruitPosition(@NotNull Fruit fruit){
         List<String> fruitNames = catalog.getFruitNames();
-        return (fruitNames.contains(fruit.name()) ? true : false);
+        return (fruitNames.indexOf(fruit.name()));
     }
 
+    public Boolean clearCatalog(){
+        availableFruits.clear();
+
+        return (availableFruits.size() == 0) ? true : false;
+    }
 }
