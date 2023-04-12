@@ -6,26 +6,33 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class Catalog {
+    private static Catalog catalog = new Catalog();
     private static List<CatalogItem> availableFruits = new ArrayList<>();
     private Map<String, Double> fruitToPrice = new HashMap<>();
+
+    public static Catalog withItems(CatalogItem... catalogItems) {
+        try {
+            List<String> fruitNames = catalog.getFruitNames();
+            for (CatalogItem catalogItem : catalogItems) {
+                if(!isAvailableFruit(catalogItem.getFruit())){catalog.availableFruits.add(catalogItem);}
+            }
+            return catalog;
+        }catch (NullPointerException noSuchFruit){
+            throw new FruitUnavailableException("Requested fruit is not an available fruit");
+        }
+    }
+
 
     public void setPriceOf(Fruit fruit, double price) {
         fruitToPrice.put(fruit.name(), price);
     }
 
-    public static Catalog withItems(CatalogItem... catalogItems) {
-        Catalog catalog = new Catalog();
-        List<String> fruitNames = catalog.getFruitNames();
-
-        for (CatalogItem catalogItem : catalogItems) {
-            if(!fruitNames.contains(catalogItem.getFruit().name())){catalog.availableFruits.add(catalogItem);}
-        }
-
-        return catalog;
-    }
-
     public double getPriceOf(Fruit fruitVariety) {
-        return fruitToPrice.getOrDefault(fruitVariety.name(),0.00);
+        try {
+            return fruitToPrice.get(fruitVariety.name());
+        }catch (NullPointerException noSuchFruit){
+            throw new FruitPriceUnavailableException("Requested fruit price is not available");
+        }
     }
 
     public List<CatalogItem> getAvailableFruits() {
@@ -38,4 +45,10 @@ public class Catalog {
                 .map(catalogItem -> catalogItem.getFruit().name())
                 .collect(Collectors.toList());
     }
+
+    public static Boolean isAvailableFruit(Fruit fruit){
+        List<String> fruitNames = catalog.getFruitNames();
+        return (fruitNames.contains(fruit.name()) ? true : false);
+    }
+
 }
